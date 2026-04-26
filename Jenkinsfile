@@ -72,10 +72,9 @@ pipeline {
 
         stage('Update Kubernetes Manifests') {
             steps {
-                withCredentials([usernamePassword(
+                withCredentials([string(
                     credentialsId: 'github-credentials',
-                    usernameVariable: 'GIT_USER',
-                    passwordVariable: 'GIT_TOKEN'
+                    variable: 'GIT_TOKEN'
                 )]) {
                     sh """
                     sed -i 's|IMAGE_TAG|${DOCKER_IMAGE_TAG}|g' kubernetes/*.yaml
@@ -86,7 +85,7 @@ pipeline {
                     git add kubernetes/
                     git commit -m "Updated image tag to ${DOCKER_IMAGE_TAG}" || true
 
-                    git remote set-url origin https://$GIT_USER:$GIT_TOKEN@github.com/rajasekhar82/tws-e-commerce-app_hackathon.git
+                    git remote set-url origin https://rajasekhar82:$GIT_TOKEN@github.com/rajasekhar82/tws-e-commerce-app_hackathon.git
                     git push origin HEAD:master
                     """
                 }
