@@ -1,30 +1,25 @@
 @Library('Shared') _
 
 pipeline {
-agent any
+    agent any
 
-```
-environment {
-    DOCKER_IMAGE_NAME = 'raja9949/easyshop-app'
-    DOCKER_MIGRATION_IMAGE_NAME = 'raja9949/easyshop-migration'
-    DOCKER_IMAGE_TAG = "${BUILD_NUMBER}"
-    GITHUB_CREDENTIALS = credentials('github-credentials')
-    GIT_BRANCH = "master"
-}
+    environment {
+        DOCKER_IMAGE_NAME = 'raja9949/easyshop-app'
+        DOCKER_MIGRATION_IMAGE_NAME = 'raja9949/easyshop-migration'
+        DOCKER_IMAGE_TAG = "${BUILD_NUMBER}"
+        GIT_BRANCH = "master"
+    }
 
-stages {
+    stages {
 
-    stage('Cleanup Workspace') {
-        steps {
-            script {
+        stage('Cleanup Workspace') {
+            steps {
                 cleanWs()
             }
         }
-    }
 
-    stage('Clone Repository') {
-        steps {
-            script {
+        stage('Clone Repository') {
+            steps {
                 code_checkout(
                     repoUrl: "https://github.com/rajasekhar82/tws-e-commerce-app_hackathon.git",
                     branch: env.GIT_BRANCH,
@@ -32,14 +27,12 @@ stages {
                 )
             }
         }
-    }
 
-    stage('Build Docker Images') {
-        parallel {
+        stage('Build Docker Images') {
+            parallel {
 
-            stage('Build Main App Image') {
-                steps {
-                    script {
+                stage('Build Main App Image') {
+                    steps {
                         docker_build(
                             imageName: env.DOCKER_IMAGE_NAME,
                             imageTag: env.DOCKER_IMAGE_TAG,
@@ -48,11 +41,9 @@ stages {
                         )
                     }
                 }
-            }
 
-            stage('Build Migration Image') {
-                steps {
-                    script {
+                stage('Build Migration Image') {
+                    steps {
                         docker_build(
                             imageName: env.DOCKER_MIGRATION_IMAGE_NAME,
                             imageTag: env.DOCKER_IMAGE_TAG,
@@ -63,30 +54,24 @@ stages {
                 }
             }
         }
-    }
 
-    stage('Run Unit Tests') {
-        steps {
-            script {
+        stage('Run Unit Tests') {
+            steps {
                 run_tests()
             }
         }
-    }
 
-    stage('Security Scan with Trivy') {
-        steps {
-            script {
+        stage('Security Scan with Trivy') {
+            steps {
                 trivy_scan()
             }
         }
-    }
 
-    stage('Push Docker Images') {
-        parallel {
+        stage('Push Docker Images') {
+            parallel {
 
-            stage('Push Main App Image') {
-                steps {
-                    script {
+                stage('Push Main App Image') {
+                    steps {
                         docker_push(
                             imageName: env.DOCKER_IMAGE_NAME,
                             imageTag: env.DOCKER_IMAGE_TAG,
@@ -94,11 +79,9 @@ stages {
                         )
                     }
                 }
-            }
 
-            stage('Push Migration Image') {
-                steps {
-                    script {
+                stage('Push Migration Image') {
+                    steps {
                         docker_push(
                             imageName: env.DOCKER_MIGRATION_IMAGE_NAME,
                             imageTag: env.DOCKER_IMAGE_TAG,
@@ -108,11 +91,9 @@ stages {
                 }
             }
         }
-    }
 
-    stage('Update Kubernetes Manifests') {
-        steps {
-            script {
+        stage('Update Kubernetes Manifests') {
+            steps {
                 update_k8s_manifests(
                     imageTag: env.DOCKER_IMAGE_TAG,
                     manifestsPath: 'kubernetes',
@@ -123,7 +104,4 @@ stages {
             }
         }
     }
-}
-```
-
 }
