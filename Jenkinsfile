@@ -30,18 +30,13 @@ pipeline {
 
                 stage('Build Main App Image') {
                     steps {
-                        sh """
-                        docker build -t ${DOCKER_IMAGE_NAME}:${DOCKER_IMAGE_TAG} .
-                        """
+                        sh "docker build -t ${DOCKER_IMAGE_NAME}:${DOCKER_IMAGE_TAG} ."
                     }
                 }
 
                 stage('Build Migration Image') {
                     steps {
-                        sh """
-                        docker build -f scripts/Dockerfile.migration \
-                        -t ${DOCKER_MIGRATION_IMAGE_NAME}:${DOCKER_IMAGE_TAG} .
-                        """
+                        sh "docker build -f scripts/Dockerfile.migration -t ${DOCKER_MIGRATION_IMAGE_NAME}:${DOCKER_IMAGE_TAG} ."
                     }
                 }
             }
@@ -49,18 +44,13 @@ pipeline {
 
         stage('Run Unit Tests') {
             steps {
-                sh """
-                echo "Running tests..."
-                # mvn test OR npm test (based on your project)
-                """
+                sh "echo Running tests..."
             }
         }
 
         stage('Security Scan with Trivy') {
             steps {
-                sh """
-                trivy image ${DOCKER_IMAGE_NAME}:${DOCKER_IMAGE_TAG}
-                """
+                sh "trivy image ${DOCKER_IMAGE_NAME}:${DOCKER_IMAGE_TAG}"
             }
         }
 
@@ -73,7 +63,6 @@ pipeline {
                 )]) {
                     sh """
                     echo $DOCKER_PASS | docker login -u $DOCKER_USER --password-stdin
-
                     docker push ${DOCKER_IMAGE_NAME}:${DOCKER_IMAGE_TAG}
                     docker push ${DOCKER_MIGRATION_IMAGE_NAME}:${DOCKER_IMAGE_TAG}
                     """
@@ -83,16 +72,24 @@ pipeline {
 
         stage('Update Kubernetes Manifests') {
             steps {
-                sh """
-                sed -i 's|IMAGE_TAG|${DOCKER_IMAGE_TAG}|g' kubernetes/*.yaml
+                withCredentials([usernamePassword(
+                    credentialsId: 'github-credentials',
+                    usernameVariable: 'GIT_USER',
+                    passwordVariable: 'GIT_TOKEN'
+                )]) {
+                    sh """
+                    sed -i 's|IMAGE_TAG|${DOCKER_IMAGE_TAG}|g' kubernetes/*.yaml
 
-                git config user.email "rajasekharn82@gmail.com"
-                git config user.name "rajasekhar82"
+                    git config user.email "rajasekharn82@gmail.com"
+                    git config user.name "rajasekhar82"
 
-                git add kubernetes/
-                git commit -m "Updated image tag to ${DOCKER_IMAGE_TAG}" || true
-                git push origin ${GIT_BRANCH}
-                """
+                    git add kubernetes/
+                    git commit -m "Updated image tag to ${DOCKER_IMAGE_TAG}" || true
+
+                    git remote set-url origin https://$GIT_USER:$GIT_TOKEN@github.com/rajasekhar82/tws-e-commerce-app_hackathon.git
+                    git push origin HEAD:master
+                    """
+                }
             }
         }
     }
